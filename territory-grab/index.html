@@ -167,6 +167,30 @@
     }
   });
 
+  // ---- touch (swipe) ----
+  let touchStart = null;
+  canvas.addEventListener('touchstart', e => {
+    const t = e.touches[0];
+    touchStart = { x: t.clientX, y: t.clientY };
+    e.preventDefault();
+  }, {passive:false});
+  canvas.addEventListener('touchmove', e => {
+    if (!touchStart) return;
+    const t = e.touches[0];
+    const dx = t.clientX - touchStart.x;
+    const dy = t.clientY - touchStart.y;
+    if (Math.abs(dx) < 18 && Math.abs(dy) < 18) return;
+    const p = players[0];
+    if (!p) return;
+    let nd;
+    if (Math.abs(dx) > Math.abs(dy)) nd = dx > 0 ? 0 : 2;
+    else nd = dy > 0 ? 1 : 3;
+    if ((nd + 2) % 4 !== p.dir) p.queuedDir = nd;
+    touchStart = { x: t.clientX, y: t.clientY };
+    e.preventDefault();
+  }, {passive:false});
+  canvas.addEventListener('touchend', () => { touchStart = null; });
+
   // ---- bot AI ----
   function botDecide(p) {
     // Choose a direction each tick based on difficulty + context.
