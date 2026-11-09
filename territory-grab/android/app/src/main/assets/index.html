@@ -5,44 +5,45 @@
 <meta name="viewport" content="width=device-width,initial-scale=1,user-scalable=no">
 <title>Territory Grab</title>
 <style>
-  html,body{margin:0;padding:0;background:#0d0f14;color:#e8ecf4;font-family:system-ui,sans-serif;overflow:hidden;height:100%;touch-action:none;user-select:none;-webkit-user-select:none}
+  html,body{margin:0;padding:0;background:#f3f6ff;color:#1c2444;font-family:system-ui,sans-serif;overflow:hidden;height:100%;touch-action:none;user-select:none;-webkit-user-select:none}
   #wrap{position:fixed;inset:0}
-  canvas{display:block;background:#111622;width:100%;height:100%}
+  canvas{display:block;background:#f3f6ff;width:100%;height:100%}
   /* HUD */
-  #topBar{position:fixed;top:0;left:0;right:0;height:46px;display:flex;align-items:center;padding:0 14px;gap:14px;background:linear-gradient(#0d0f14ee,#0d0f1400);pointer-events:none;z-index:4}
-  #youPct{font-size:22px;font-weight:bold;color:#ffd166;text-shadow:0 1px 2px #000}
-  #youLabel{opacity:.7;font-size:12px}
-  #timer{margin-left:auto;font-size:18px;color:#8affc1;text-shadow:0 1px 2px #000}
-  #trailBar{width:120px;height:6px;background:#1a2032;border-radius:3px;overflow:hidden}
-  #trailFill{height:100%;width:0;background:#ff6b6b;transition:width .1s}
+  #topBar{position:fixed;top:0;left:0;right:0;height:52px;display:flex;align-items:center;padding:8px 14px;gap:12px;pointer-events:none;z-index:4}
+  #youPct{font-size:24px;font-weight:900;color:#1c2444;background:#ffffffcc;padding:4px 12px;border-radius:999px;box-shadow:0 2px 8px #0002}
+  #youLabel{opacity:.65;font-size:11px;letter-spacing:1px}
+  #timer{margin-left:auto;font-size:18px;font-weight:bold;color:#1c2444;background:#ffffffcc;padding:4px 12px;border-radius:999px;box-shadow:0 2px 8px #0002}
+  #trailBar{width:140px;height:10px;background:#ffffffcc;border-radius:999px;overflow:hidden;box-shadow:inset 0 1px 3px #0002}
+  #trailFill{height:100%;width:0;background:linear-gradient(90deg,#ffd166,#ff6b6b);transition:width .1s;border-radius:999px}
   /* Scoreboard */
-  #score{position:fixed;top:54px;right:10px;background:#0d0f14cc;padding:8px 10px;border-radius:6px;font-size:12px;line-height:1.5;min-width:150px;z-index:4;pointer-events:none;border:1px solid #1d2538}
-  #score .row{display:flex;align-items:center;gap:6px}
-  #score .sw{width:10px;height:10px;border-radius:2px;flex:0 0 auto}
-  #score .nm{flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
-  #score .pc{opacity:.85;font-variant-numeric:tabular-nums}
-  #score .me{color:#ffd166;font-weight:bold}
+  #score{position:fixed;top:62px;right:12px;background:#ffffffe8;padding:10px 12px;border-radius:14px;font-size:13px;line-height:1.6;min-width:170px;z-index:4;pointer-events:none;box-shadow:0 4px 18px #0002}
+  #score .row{display:flex;align-items:center;gap:8px}
+  #score .sw{width:14px;height:14px;border-radius:50%;flex:0 0 auto;box-shadow:0 1px 2px #0003}
+  #score .nm{flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;color:#1c2444}
+  #score .pc{opacity:.75;font-variant-numeric:tabular-nums;font-weight:bold;color:#1c2444}
+  #score .me .nm,#score .me .pc{color:#d78a00;font-weight:900}
   /* Minimap */
-  #miniWrap{position:fixed;bottom:10px;right:10px;width:160px;height:120px;background:#0d0f14cc;border:1px solid #1d2538;border-radius:4px;overflow:hidden;z-index:4;pointer-events:none}
+  #miniWrap{position:fixed;bottom:14px;right:14px;width:170px;height:130px;background:#ffffffe8;border-radius:14px;overflow:hidden;z-index:4;pointer-events:none;box-shadow:0 4px 18px #0002}
   #mini{width:100%;height:100%;display:block}
   /* Menu */
-  #menu{position:fixed;inset:0;background:radial-gradient(ellipse at center,#141a2e,#07090d);display:flex;flex-direction:column;align-items:center;justify-content:center;gap:18px;z-index:10;padding:20px;text-align:center}
-  #menu h1{margin:0;font-size:46px;letter-spacing:3px;color:#ffd166;text-shadow:0 0 24px #ffd16633}
-  #menu h1 span{color:#8affc1}
-  #menu p{margin:0;opacity:.85;max-width:460px;line-height:1.5}
+  #menu{position:fixed;inset:0;background:linear-gradient(140deg,#dbe7ff 0%,#ffe4f1 50%,#e2fff1 100%);display:flex;flex-direction:column;align-items:center;justify-content:center;gap:18px;z-index:10;padding:20px;text-align:center;color:#1c2444}
+  #menu h1{margin:0;font-size:56px;letter-spacing:4px;color:#1c2444;font-weight:900;text-shadow:0 4px 0 #ffffff80}
+  #menu h1 span{color:#ff6b9c}
+  #menu p{margin:0;max-width:480px;line-height:1.5;color:#1c2444bb}
   .row{display:flex;gap:10px;flex-wrap:wrap;justify-content:center}
-  .lbl{font-size:12px;letter-spacing:2px;opacity:.55;text-transform:uppercase}
-  button{background:#1d2538;color:#e8ecf4;border:1px solid #3a4870;padding:10px 18px;font-size:15px;cursor:pointer;border-radius:4px;font-family:inherit;transition:all .15s}
-  button:hover{background:#2a365a;transform:translateY(-1px)}
-  button.on{background:#ffd166;color:#111;border-color:#ffd166}
-  #startBtn{background:#ffd166;color:#111;border-color:#ffd166;font-weight:bold;font-size:18px;padding:14px 36px;letter-spacing:2px;box-shadow:0 0 20px #ffd16644}
-  #over{position:fixed;inset:0;display:none;align-items:center;justify-content:center;background:rgba(7,9,13,.92);z-index:9;flex-direction:column;gap:14px;text-align:center;padding:20px}
-  #over h2{margin:0;font-size:44px;color:#ff6b6b;letter-spacing:3px}
-  #over.win h2{color:#8affc1}
-  #over .stats{opacity:.85;line-height:1.7}
+  .lbl{font-size:12px;letter-spacing:3px;color:#1c2444aa;text-transform:uppercase;font-weight:bold}
+  button{background:#ffffff;color:#1c2444;border:none;padding:12px 20px;font-size:15px;cursor:pointer;border-radius:999px;font-family:inherit;transition:all .15s;font-weight:bold;box-shadow:0 3px 0 #1c244422}
+  button:hover{transform:translateY(-1px);box-shadow:0 5px 0 #1c244422}
+  button.on{background:#ffd166;color:#1c2444;box-shadow:0 3px 0 #a37b00}
+  #startBtn{background:#ff6b9c;color:#fff;font-size:22px;padding:18px 48px;letter-spacing:3px;box-shadow:0 6px 0 #a63a66,0 8px 24px #ff6b9c66;margin-top:4px}
+  #startBtn:hover{box-shadow:0 8px 0 #a63a66,0 10px 28px #ff6b9c66}
+  #over{position:fixed;inset:0;display:none;align-items:center;justify-content:center;background:linear-gradient(140deg,#dbe7ffee,#ffe4f1ee,#e2fff1ee);z-index:9;flex-direction:column;gap:14px;text-align:center;padding:20px}
+  #over h2{margin:0;font-size:56px;color:#ff4d6d;letter-spacing:4px;font-weight:900;text-shadow:0 4px 0 #ffffff80}
+  #over.win h2{color:#2fb37a}
+  #over .stats{line-height:1.8;font-size:16px;color:#1c2444}
   /* on-screen touch pad */
-  #pad{position:fixed;bottom:10px;left:10px;width:140px;height:140px;background:#0d0f1488;border:1px solid #1d2538;border-radius:50%;z-index:4;touch-action:none;display:none}
-  #pad .s{position:absolute;width:40px;height:40px;background:#ffd16688;border-radius:50%;top:50%;left:50%;transform:translate(-50%,-50%);transition:transform .05s}
+  #pad{position:fixed;bottom:14px;left:14px;width:140px;height:140px;background:#ffffffaa;border-radius:50%;z-index:4;touch-action:none;display:none;box-shadow:0 4px 18px #0002}
+  #pad .s{position:absolute;width:50px;height:50px;background:#ff6b9c;border-radius:50%;top:50%;left:50%;transform:translate(-50%,-50%);transition:transform .05s;box-shadow:0 3px 0 #a63a66}
   @media (pointer:coarse){#pad{display:block}}
 </style>
 </head>
@@ -93,22 +94,22 @@
   const COLS = 110;
   const ROWS = 110;
   const PAL = [
-    { body:'#ffd166', fill:'#c9a63a', trail:'#ffe29c', name:'You' },
-    { body:'#ff6b6b', fill:'#a63a3a', trail:'#ffb3b3', name:'Ruby' },
-    { body:'#4cc9f0', fill:'#2a7ea8', trail:'#a8e4f5', name:'Azure' },
-    { body:'#8affc1', fill:'#3d8f68', trail:'#c6f5d9', name:'Mint' },
-    { body:'#f78fb3', fill:'#a44c73', trail:'#fbc7d8', name:'Blush' },
-    { body:'#c08cff', fill:'#6b4fa8', trail:'#dfc9ff', name:'Iris' },
-    { body:'#ffa94d', fill:'#a86a2a', trail:'#ffd1a1', name:'Peach' },
-    { body:'#9fe870', fill:'#5c9b3f', trail:'#cff2b0', name:'Lime' },
-    { body:'#7ec8ff', fill:'#4178a8', trail:'#bde0ff', name:'Sky' },
-    { body:'#ff9ff3', fill:'#a460a0', trail:'#ffd6f5', name:'Rose' },
-    { body:'#d0d4dc', fill:'#6a6e78', trail:'#ececec', name:'Ash' },
-    { body:'#ff8e72', fill:'#a44a3a', trail:'#ffbea8', name:'Clay' },
-    { body:'#72f0e8', fill:'#2f8a85', trail:'#b1f5f0', name:'Aqua' },
-    { body:'#f3e072', fill:'#8f8a3a', trail:'#faf0b0', name:'Sunny' },
-    { body:'#b388ff', fill:'#6a4fa8', trail:'#ddc6ff', name:'Grape' },
-    { body:'#ffb199', fill:'#a46a5c', trail:'#ffd5c6', name:'Coral' },
+    { body:'#ff6b9c', fill:'#ffb3cc', trail:'#ff8fb3', name:'You'    },
+    { body:'#5aa9ff', fill:'#b3d4ff', trail:'#86bbff', name:'Lagoon' },
+    { body:'#ffd166', fill:'#ffe8a8', trail:'#ffdc8a', name:'Butter' },
+    { body:'#7ed8a7', fill:'#c8edd7', trail:'#a3e4c1', name:'Mint'   },
+    { body:'#c88cff', fill:'#e3c8ff', trail:'#d4a8ff', name:'Grape'  },
+    { body:'#ff9a66', fill:'#ffccb3', trail:'#ffb48c', name:'Peach'  },
+    { body:'#66d9e0', fill:'#b8ecef', trail:'#8fe2e8', name:'Lagoon2'},
+    { body:'#f27b9e', fill:'#f7bcce', trail:'#f49bb6', name:'Rose'   },
+    { body:'#9ad87a', fill:'#cdebc1', trail:'#b4e09e', name:'Grass'  },
+    { body:'#ffa3d3', fill:'#ffcce5', trail:'#ffb9dc', name:'Bubble' },
+    { body:'#a7b9ff', fill:'#cdd6ff', trail:'#b8c6ff', name:'Sky'    },
+    { body:'#ffcf5a', fill:'#ffe7a8', trail:'#ffdd84', name:'Sun'    },
+    { body:'#f58fb3', fill:'#f9c0d5', trail:'#f7a4c2', name:'Candy'  },
+    { body:'#8fdbff', fill:'#c3eaff', trail:'#a4e1ff', name:'Cloud'  },
+    { body:'#ffb27a', fill:'#ffd4b3', trail:'#ffc39a', name:'Coral'  },
+    { body:'#d1b3ff', fill:'#e4d1ff', trail:'#dac3ff', name:'Lilac'  },
   ];
   const DIRS = [[1,0],[0,1],[-1,0],[0,-1]];
 
@@ -462,120 +463,167 @@
   }
 
   function draw(sub){
-    // camera transform
     const z = camera.zoom;
     const vw = W/z, vh = H/z;
     const camX = camera.x - vw/2;
     const camY = camera.y - vh/2;
 
-    ctx.save();
-    ctx.fillStyle='#111622';
+    // soft pastel backdrop (no camera transform)
+    const grd = ctx.createLinearGradient(0,0,0,H);
+    grd.addColorStop(0,'#e8f1ff');
+    grd.addColorStop(1,'#eafaf0');
+    ctx.fillStyle = grd;
     ctx.fillRect(0,0,W,H);
+
+    ctx.save();
     ctx.scale(z,z);
     ctx.translate(-camX, -camY);
 
-    // compute visible cell window
-    const cx0 = Math.max(0, Math.floor(camX/CELL)-1);
-    const cy0 = Math.max(0, Math.floor(camY/CELL)-1);
-    const cx1 = Math.min(COLS-1, Math.ceil((camX+vw)/CELL)+1);
-    const cy1 = Math.min(ROWS-1, Math.ceil((camY+vh)/CELL)+1);
+    // soft arena card
+    const arenaX=0, arenaY=0, arenaW=COLS*CELL, arenaH=ROWS*CELL;
+    ctx.fillStyle = '#ffffffcc';
+    roundRect(ctx, arenaX-20, arenaY-20, arenaW+40, arenaH+40, 48);
+    ctx.fill();
 
-    // world backdrop
-    ctx.fillStyle = '#131a29';
-    ctx.fillRect(0, 0, COLS*CELL, ROWS*CELL);
+    // visible range
+    const cx0 = Math.max(0, Math.floor(camX/CELL)-2);
+    const cy0 = Math.max(0, Math.floor(camY/CELL)-2);
+    const cx1 = Math.min(COLS-1, Math.ceil((camX+vw)/CELL)+2);
+    const cy1 = Math.min(ROWS-1, Math.ceil((camY+vh)/CELL)+2);
 
-    // grid dots
-    ctx.fillStyle='#1c2742';
-    for(let y=cy0;y<=cy1;y+=1){
-      for(let x=cx0;x<=cx1;x+=1){
-        if((x+y)%2===0) ctx.fillRect(x*CELL, y*CELL, CELL, CELL);
-      }
-    }
-
-    // owned land
-    for(let y=cy0;y<=cy1;y++){
-      for(let x=cx0;x<=cx1;x++){
-        const o = owner[idx(x,y)];
-        if(o!==-1){
-          ctx.fillStyle = players[o].color.fill;
-          ctx.fillRect(x*CELL, y*CELL, CELL, CELL);
-        }
-      }
-    }
-    // outline between land owners (thin)
-    ctx.strokeStyle='rgba(0,0,0,0.25)';
-    ctx.lineWidth=1;
+    // ===== BLOB LAND =====
+    // draw each owned cell as a large filled circle, grouped by owner.
+    // overlapping circles merge visually into a rounded blob shape.
+    const byOwner = new Map();
     for(let y=cy0;y<=cy1;y++){
       for(let x=cx0;x<=cx1;x++){
         const o = owner[idx(x,y)];
         if(o===-1) continue;
-        // right/bottom outline where neighbor differs
-        if(x+1<COLS && owner[idx(x+1,y)]!==o){
-          ctx.beginPath(); ctx.moveTo((x+1)*CELL, y*CELL); ctx.lineTo((x+1)*CELL, (y+1)*CELL); ctx.stroke();
-        }
-        if(y+1<ROWS && owner[idx(x,y+1)]!==o){
-          ctx.beginPath(); ctx.moveTo(x*CELL, (y+1)*CELL); ctx.lineTo((x+1)*CELL, (y+1)*CELL); ctx.stroke();
-        }
+        if(!byOwner.has(o)) byOwner.set(o,[]);
+        byOwner.get(o).push([x,y]);
       }
     }
-
-    // trails
-    for(let y=cy0;y<=cy1;y++){
-      for(let x=cx0;x<=cx1;x++){
-        const t = trailOwner[idx(x,y)];
-        if(t!==-1){
-          ctx.fillStyle = players[t].color.trail;
-          const inset=3;
-          roundRect(ctx, x*CELL+inset, y*CELL+inset, CELL-inset*2, CELL-inset*2, 4);
-          ctx.fill();
-        }
+    // dark outline pass (slightly bigger radius) to give a chunky border
+    const R = CELL*0.85;
+    const Rin = CELL*0.72;
+    for(const [o,cells] of byOwner){
+      ctx.fillStyle = 'rgba(0,0,0,0.12)';
+      ctx.beginPath();
+      for(const [x,y] of cells){
+        ctx.moveTo(x*CELL+CELL/2+R, y*CELL+CELL/2);
+        ctx.arc(x*CELL+CELL/2, y*CELL+CELL/2, R, 0, Math.PI*2);
       }
+      ctx.fill();
+    }
+    // colored blob pass
+    for(const [o,cells] of byOwner){
+      ctx.fillStyle = players[o].color.fill;
+      ctx.beginPath();
+      for(const [x,y] of cells){
+        ctx.moveTo(x*CELL+CELL/2+Rin, y*CELL+CELL/2);
+        ctx.arc(x*CELL+CELL/2, y*CELL+CELL/2, Rin, 0, Math.PI*2);
+      }
+      ctx.fill();
     }
 
-    // world border
-    ctx.strokeStyle='#ffd16633';
-    ctx.lineWidth=3;
-    ctx.strokeRect(0,0,COLS*CELL,ROWS*CELL);
+    // ===== CURVY TRAIL =====
+    for(const p of players){
+      if(!p.alive || p.trail.length===0) continue;
+      const pts = [];
+      for(const [tx,ty] of p.trail) pts.push([tx*CELL+CELL/2, ty*CELL+CELL/2]);
+      // extend trail with current head interp position
+      const hx = (p.prevX + (p.x-p.prevX)*sub)*CELL + CELL/2;
+      const hy = (p.prevY + (p.y-p.prevY)*sub)*CELL + CELL/2;
+      pts.push([hx,hy]);
 
-    // players
+      // shadow
+      ctx.strokeStyle='rgba(0,0,0,0.15)';
+      ctx.lineWidth = CELL*0.85;
+      ctx.lineCap='round';
+      ctx.lineJoin='round';
+      drawSmoothPath(ctx, pts, 2);
+      // color
+      ctx.strokeStyle = p.color.trail;
+      ctx.lineWidth = CELL*0.7;
+      drawSmoothPath(ctx, pts, 0);
+    }
+
+    // ===== PLAYERS (round head) =====
     for(const p of players){
       if(!p.alive) continue;
-      const fx = (p.prevX + (p.x-p.prevX)*sub)*CELL;
-      const fy = (p.prevY + (p.y-p.prevY)*sub)*CELL;
-      // body shadow
-      ctx.fillStyle='rgba(0,0,0,0.35)';
-      roundRect(ctx, fx+2, fy+3, CELL-2, CELL-2, 6); ctx.fill();
+      const fx = (p.prevX + (p.x-p.prevX)*sub)*CELL + CELL/2;
+      const fy = (p.prevY + (p.y-p.prevY)*sub)*CELL + CELL/2;
+      const rBody = CELL*1.1;
+      // shadow
+      ctx.fillStyle='rgba(0,0,0,0.22)';
+      ctx.beginPath();
+      ctx.ellipse(fx, fy+rBody*0.9, rBody*0.9, rBody*0.35, 0, 0, Math.PI*2);
+      ctx.fill();
       // body
       ctx.fillStyle = p.color.body;
-      roundRect(ctx, fx, fy, CELL, CELL, 6); ctx.fill();
-      // face (eyes)
-      ctx.fillStyle='#111';
+      ctx.beginPath();
+      ctx.arc(fx, fy, rBody, 0, Math.PI*2);
+      ctx.fill();
+      // dark stroke
+      ctx.strokeStyle='rgba(0,0,0,0.28)';
+      ctx.lineWidth=2;
+      ctx.stroke();
+      // highlight
+      ctx.fillStyle='rgba(255,255,255,0.35)';
+      ctx.beginPath();
+      ctx.ellipse(fx-rBody*0.35, fy-rBody*0.4, rBody*0.45, rBody*0.25, -0.5, 0, Math.PI*2);
+      ctx.fill();
+      // eyes
       const d=p.dir;
-      let eox=0, eoy=0;
-      if(d===0){eox=4;}
-      else if(d===2){eox=-4;}
-      else if(d===1){eoy=4;}
-      else {eoy=-4;}
-      const cxE = fx+CELL/2, cyE=fy+CELL/2;
-      // perpendicular offset for two eyes
-      const perp = d%2===0 ? [0,5] : [5,0];
-      ctx.beginPath(); ctx.arc(cxE+eox-perp[0], cyE+eoy-perp[1], 2.5, 0, Math.PI*2); ctx.fill();
-      ctx.beginPath(); ctx.arc(cxE+eox+perp[0], cyE+eoy+perp[1], 2.5, 0, Math.PI*2); ctx.fill();
+      const fwd = DIRS[d];
+      const perpX = -fwd[1], perpY = fwd[0];
+      const eyeDist = rBody*0.35;
+      const eyeFwd  = rBody*0.35;
+      const eyeR = rBody*0.22;
+      const pupilR = rBody*0.12;
+      for(const s of [-1,1]){
+        const ex = fx + fwd[0]*eyeFwd + perpX*eyeDist*s;
+        const ey = fy + fwd[1]*eyeFwd + perpY*eyeDist*s;
+        ctx.fillStyle='#fff';
+        ctx.beginPath(); ctx.arc(ex,ey,eyeR,0,Math.PI*2); ctx.fill();
+        ctx.fillStyle='#1c2444';
+        ctx.beginPath();
+        ctx.arc(ex+fwd[0]*eyeR*0.35, ey+fwd[1]*eyeR*0.35, pupilR, 0, Math.PI*2);
+        ctx.fill();
+      }
       // name label
-      ctx.fillStyle='rgba(0,0,0,0.6)';
-      ctx.font='bold 11px system-ui';
-      const name = p.name;
-      const tw = ctx.measureText(name).width + 8;
-      ctx.fillRect(fx+CELL/2-tw/2, fy-16, tw, 14);
-      ctx.fillStyle = p.color.body;
+      ctx.font='bold 13px system-ui';
       ctx.textAlign='center';
       ctx.textBaseline='middle';
-      ctx.fillText(name, fx+CELL/2, fy-9);
+      const name = p.name;
+      const tw = ctx.measureText(name).width + 14;
+      const ly = fy - rBody - 16;
+      ctx.fillStyle='rgba(255,255,255,0.9)';
+      roundRect(ctx, fx-tw/2, ly-10, tw, 20, 10); ctx.fill();
+      ctx.fillStyle = '#1c2444';
+      ctx.fillText(name, fx, ly);
     }
 
     ctx.restore();
     drawMini();
     drawHud();
+  }
+
+  // Catmull-Rom-ish smoothed polyline stroke
+  function drawSmoothPath(c, pts, inset){
+    if(pts.length<2) return;
+    c.beginPath();
+    c.moveTo(pts[0][0], pts[0][1]);
+    if(pts.length===2){ c.lineTo(pts[1][0], pts[1][1]); c.stroke(); return; }
+    for(let i=1;i<pts.length-1;i++){
+      const [x0,y0] = pts[i];
+      const [x1,y1] = pts[i+1];
+      const mx = (x0+x1)/2, my=(y0+y1)/2;
+      c.quadraticCurveTo(x0,y0,mx,my);
+    }
+    const last = pts[pts.length-1];
+    c.lineTo(last[0], last[1]);
+    c.stroke();
   }
 
   function roundRect(c,x,y,w,h,r){
@@ -591,7 +639,7 @@
 
   function drawMini(){
     const mw=mini.width, mh=mini.height;
-    mctx.fillStyle='#0d0f14';
+    mctx.fillStyle='#f3f6ff';
     mctx.fillRect(0,0,mw,mh);
     const sx=mw/COLS, sy=mh/ROWS;
     for(let y=0;y<ROWS;y++){
@@ -603,15 +651,11 @@
         }
       }
     }
-    // player dot
     for(const p of players){
       if(!p.alive) continue;
-      mctx.fillStyle = p===players[0] ? '#fff' : p.color.body;
-      mctx.fillRect(p.x*sx-1, p.y*sy-1, 3, 3);
+      mctx.fillStyle = p===players[0] ? '#1c2444' : '#ffffff';
+      mctx.fillRect(p.x*sx-2, p.y*sy-2, 4, 4);
     }
-    // frame border
-    mctx.strokeStyle='#ffd16666';
-    mctx.strokeRect(0.5,0.5,mw-1,mh-1);
   }
 
   function drawHud(){
