@@ -2,552 +2,715 @@
 <html lang="en">
 <head>
 <meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,user-scalable=no">
 <title>Territory Grab</title>
 <style>
-  html,body{margin:0;padding:0;background:#0d0f14;color:#e8ecf4;font-family:system-ui,sans-serif;overflow:hidden;height:100%}
-  #wrap{position:fixed;inset:0;display:flex;align-items:center;justify-content:center}
-  canvas{background:#111622;display:block;image-rendering:pixelated;box-shadow:0 0 0 2px #1d2538}
-  #hud{position:fixed;top:10px;left:10px;font-size:14px;line-height:1.4;pointer-events:none;text-shadow:0 1px 2px #000}
-  #hud b{color:#ffd166}
-  #menu{position:fixed;inset:0;background:rgba(10,12,18,.92);display:flex;flex-direction:column;align-items:center;justify-content:center;gap:16px;z-index:10}
-  #menu h1{margin:0;font-size:42px;letter-spacing:2px;color:#ffd166}
-  #menu p{margin:0;opacity:.8;max-width:420px;text-align:center}
+  html,body{margin:0;padding:0;background:#0d0f14;color:#e8ecf4;font-family:system-ui,sans-serif;overflow:hidden;height:100%;touch-action:none;user-select:none;-webkit-user-select:none}
+  #wrap{position:fixed;inset:0}
+  canvas{display:block;background:#111622;width:100%;height:100%}
+  /* HUD */
+  #topBar{position:fixed;top:0;left:0;right:0;height:46px;display:flex;align-items:center;padding:0 14px;gap:14px;background:linear-gradient(#0d0f14ee,#0d0f1400);pointer-events:none;z-index:4}
+  #youPct{font-size:22px;font-weight:bold;color:#ffd166;text-shadow:0 1px 2px #000}
+  #youLabel{opacity:.7;font-size:12px}
+  #timer{margin-left:auto;font-size:18px;color:#8affc1;text-shadow:0 1px 2px #000}
+  #trailBar{width:120px;height:6px;background:#1a2032;border-radius:3px;overflow:hidden}
+  #trailFill{height:100%;width:0;background:#ff6b6b;transition:width .1s}
+  /* Scoreboard */
+  #score{position:fixed;top:54px;right:10px;background:#0d0f14cc;padding:8px 10px;border-radius:6px;font-size:12px;line-height:1.5;min-width:150px;z-index:4;pointer-events:none;border:1px solid #1d2538}
+  #score .row{display:flex;align-items:center;gap:6px}
+  #score .sw{width:10px;height:10px;border-radius:2px;flex:0 0 auto}
+  #score .nm{flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+  #score .pc{opacity:.85;font-variant-numeric:tabular-nums}
+  #score .me{color:#ffd166;font-weight:bold}
+  /* Minimap */
+  #miniWrap{position:fixed;bottom:10px;right:10px;width:160px;height:120px;background:#0d0f14cc;border:1px solid #1d2538;border-radius:4px;overflow:hidden;z-index:4;pointer-events:none}
+  #mini{width:100%;height:100%;display:block}
+  /* Menu */
+  #menu{position:fixed;inset:0;background:radial-gradient(ellipse at center,#141a2e,#07090d);display:flex;flex-direction:column;align-items:center;justify-content:center;gap:18px;z-index:10;padding:20px;text-align:center}
+  #menu h1{margin:0;font-size:46px;letter-spacing:3px;color:#ffd166;text-shadow:0 0 24px #ffd16633}
+  #menu h1 span{color:#8affc1}
+  #menu p{margin:0;opacity:.85;max-width:460px;line-height:1.5}
   .row{display:flex;gap:10px;flex-wrap:wrap;justify-content:center}
-  button{background:#1d2538;color:#e8ecf4;border:1px solid #3a4870;padding:10px 18px;font-size:16px;cursor:pointer;border-radius:4px;font-family:inherit}
-  button:hover{background:#2a365a}
+  .lbl{font-size:12px;letter-spacing:2px;opacity:.55;text-transform:uppercase}
+  button{background:#1d2538;color:#e8ecf4;border:1px solid #3a4870;padding:10px 18px;font-size:15px;cursor:pointer;border-radius:4px;font-family:inherit;transition:all .15s}
+  button:hover{background:#2a365a;transform:translateY(-1px)}
   button.on{background:#ffd166;color:#111;border-color:#ffd166}
-  #over{position:fixed;inset:0;display:none;align-items:center;justify-content:center;background:rgba(10,12,18,.85);z-index:9;flex-direction:column;gap:12px}
-  #over h2{margin:0;font-size:36px;color:#ff6b6b}
+  #startBtn{background:#ffd166;color:#111;border-color:#ffd166;font-weight:bold;font-size:18px;padding:14px 36px;letter-spacing:2px;box-shadow:0 0 20px #ffd16644}
+  #over{position:fixed;inset:0;display:none;align-items:center;justify-content:center;background:rgba(7,9,13,.92);z-index:9;flex-direction:column;gap:14px;text-align:center;padding:20px}
+  #over h2{margin:0;font-size:44px;color:#ff6b6b;letter-spacing:3px}
   #over.win h2{color:#8affc1}
+  #over .stats{opacity:.85;line-height:1.7}
+  /* on-screen touch pad */
+  #pad{position:fixed;bottom:10px;left:10px;width:140px;height:140px;background:#0d0f1488;border:1px solid #1d2538;border-radius:50%;z-index:4;touch-action:none;display:none}
+  #pad .s{position:absolute;width:40px;height:40px;background:#ffd16688;border-radius:50%;top:50%;left:50%;transform:translate(-50%,-50%);transition:transform .05s}
+  @media (pointer:coarse){#pad{display:block}}
 </style>
 </head>
 <body>
-<div id="wrap"><canvas id="c" width="900" height="650"></canvas></div>
-<div id="hud">
-  <div>You: <b id="hLand">0%</b> &nbsp; Trail: <b id="hTrail">0</b></div>
-  <div>Bots alive: <b id="hBots">0</b></div>
-  <div>Rank: <b id="hRank">1</b> / <b id="hTotal">1</b></div>
-  <div style="opacity:.7;font-size:12px;margin-top:6px">WASD / arrows. Fill territory. Don't touch your own trail or anyone else's player.</div>
+<div id="wrap"><canvas id="c"></canvas></div>
+
+<div id="topBar">
+  <div><div id="youPct">0.00%</div><div id="youLabel">YOUR LAND</div></div>
+  <div style="opacity:.6">Trail:</div>
+  <div id="trailBar"><div id="trailFill"></div></div>
+  <div id="timer">0:00</div>
 </div>
+<div id="score"></div>
+<div id="miniWrap"><canvas id="mini" width="160" height="120"></canvas></div>
+<div id="pad"><div class="s"></div></div>
 
 <div id="menu">
-  <h1>TERRITORY GRAB</h1>
-  <p>Carve out land. Close the loop to claim it. Catch a rival on their own trail to knock them out. Ride your trail or ram a rival's body and you're dead.</p>
-  <div>Difficulty:</div>
+  <h1>TERRITORY <span>GRAB</span></h1>
+  <p>Carve land outside your zone. Return to your color to flood-fill the enclosure. Catch a rival on their trail to wipe them. Ride your own trail, hit the edge, or ram a rival's body — dead.</p>
+  <div class="lbl">Difficulty</div>
   <div class="row" id="diffRow">
-    <button data-d="0" class="on">Easy — wanderers</button>
-    <button data-d="1">Normal — pushy</button>
-    <button data-d="2">Hard — hunters</button>
+    <button data-d="0" class="on">EASY</button>
+    <button data-d="1">NORMAL</button>
+    <button data-d="2">HARD</button>
+    <button data-d="3">INSANE</button>
   </div>
-  <div>Bots:</div>
+  <div class="lbl">Bots</div>
   <div class="row" id="botRow">
     <button data-b="3">3</button>
     <button data-b="6" class="on">6</button>
     <button data-b="10">10</button>
+    <button data-b="15">15</button>
   </div>
-  <div class="row"><button id="startBtn" style="background:#ffd166;color:#111;border-color:#ffd166;font-weight:bold">START</button></div>
+  <div class="row"><button id="startBtn">START</button></div>
+  <p style="font-size:12px;opacity:.5">Desktop: WASD / arrows &nbsp;&middot;&nbsp; Mobile: swipe anywhere, or use the joypad</p>
 </div>
 
 <div id="over">
   <h2 id="overTitle">WIPED</h2>
-  <div id="overStats"></div>
-  <button id="againBtn">Play again</button>
+  <div class="stats" id="overStats"></div>
+  <div class="row"><button id="againBtn" style="background:#ffd166;color:#111;border-color:#ffd166;font-weight:bold">PLAY AGAIN</button></div>
 </div>
 
 <script>
 (() => {
-  const CELL = 14;
-  const COLS = 70;
-  const ROWS = 50;
-  const canvas = document.getElementById('c');
-  canvas.width = COLS * CELL;
-  canvas.height = ROWS * CELL;
-  const ctx = canvas.getContext('2d');
-
-  const DIRS = [[1,0],[0,1],[-1,0],[0,-1]]; // R D L U
-
-  const PALETTE = [
-    { body:'#ffd166', fill:'#c9a63a', trail:'#ffe29c' }, // player
-    { body:'#ff6b6b', fill:'#a63a3a', trail:'#ffb3b3' },
-    { body:'#4cc9f0', fill:'#2a7ea8', trail:'#a8e4f5' },
-    { body:'#8affc1', fill:'#3d8f68', trail:'#c6f5d9' },
-    { body:'#f78fb3', fill:'#a44c73', trail:'#fbc7d8' },
-    { body:'#c08cff', fill:'#6b4fa8', trail:'#dfc9ff' },
-    { body:'#ffa94d', fill:'#a86a2a', trail:'#ffd1a1' },
-    { body:'#9fe870', fill:'#5c9b3f', trail:'#cff2b0' },
-    { body:'#7ec8ff', fill:'#4178a8', trail:'#bde0ff' },
-    { body:'#ff9ff3', fill:'#a460a0', trail:'#ffd6f5' },
-    { body:'#d0d4dc', fill:'#6a6e78', trail:'#ececec' },
+  // ======== CONFIG ========
+  const CELL = 22;            // world cell size in px at zoom 1
+  const COLS = 110;
+  const ROWS = 110;
+  const PAL = [
+    { body:'#ffd166', fill:'#c9a63a', trail:'#ffe29c', name:'You' },
+    { body:'#ff6b6b', fill:'#a63a3a', trail:'#ffb3b3', name:'Ruby' },
+    { body:'#4cc9f0', fill:'#2a7ea8', trail:'#a8e4f5', name:'Azure' },
+    { body:'#8affc1', fill:'#3d8f68', trail:'#c6f5d9', name:'Mint' },
+    { body:'#f78fb3', fill:'#a44c73', trail:'#fbc7d8', name:'Blush' },
+    { body:'#c08cff', fill:'#6b4fa8', trail:'#dfc9ff', name:'Iris' },
+    { body:'#ffa94d', fill:'#a86a2a', trail:'#ffd1a1', name:'Peach' },
+    { body:'#9fe870', fill:'#5c9b3f', trail:'#cff2b0', name:'Lime' },
+    { body:'#7ec8ff', fill:'#4178a8', trail:'#bde0ff', name:'Sky' },
+    { body:'#ff9ff3', fill:'#a460a0', trail:'#ffd6f5', name:'Rose' },
+    { body:'#d0d4dc', fill:'#6a6e78', trail:'#ececec', name:'Ash' },
+    { body:'#ff8e72', fill:'#a44a3a', trail:'#ffbea8', name:'Clay' },
+    { body:'#72f0e8', fill:'#2f8a85', trail:'#b1f5f0', name:'Aqua' },
+    { body:'#f3e072', fill:'#8f8a3a', trail:'#faf0b0', name:'Sunny' },
+    { body:'#b388ff', fill:'#6a4fa8', trail:'#ddc6ff', name:'Grape' },
+    { body:'#ffb199', fill:'#a46a5c', trail:'#ffd5c6', name:'Coral' },
   ];
+  const DIRS = [[1,0],[0,1],[-1,0],[0,-1]];
 
-  let owner;        // Int16Array ROWS*COLS, -1 empty, else player index
-  let trailOwner;   // Int16Array, -1 or player index whose trail is here
-  let players = [];
-  let frame = 0;
-  let tickAccum = 0;
-  let running = false;
-  let difficulty = 0; // 0 easy, 1 normal, 2 hard
-  let botCount = 6;
-  let lastT = 0;
+  const canvas = document.getElementById('c');
+  const ctx = canvas.getContext('2d');
+  const mini = document.getElementById('mini');
+  const mctx = mini.getContext('2d');
 
-  const idx = (x,y) => y * COLS + x;
-  const inb = (x,y) => x >= 0 && y >= 0 && x < COLS && y < ROWS;
+  // ======== STATE ========
+  let owner, trailOwner, players, running=false, frame=0, startedAt=0;
+  let difficulty=0, botCount=6;
+  let camera = { x:0, y:0, targetX:0, targetY:0, zoom:1 };
+  let W=0, H=0, DPR=1;
+
+  const idx = (x,y) => y*COLS + x;
+  const inb = (x,y) => x>=0 && y>=0 && x<COLS && y<ROWS;
+
+  function resize() {
+    DPR = Math.max(1, Math.min(2, window.devicePixelRatio || 1));
+    W = window.innerWidth; H = window.innerHeight;
+    canvas.width = W*DPR; canvas.height = H*DPR;
+    canvas.style.width = W+'px'; canvas.style.height = H+'px';
+    ctx.setTransform(DPR,0,0,DPR,0,0);
+    // zoom: fit ~22 cells across the short side
+    const target = Math.min(W,H) / (22*CELL);
+    camera.zoom = Math.max(0.6, Math.min(2.2, target));
+  }
+  window.addEventListener('resize', resize);
 
   class Player {
-    constructor(i, isBot, startX, startY) {
-      this.i = i;
-      this.bot = isBot;
-      this.alive = true;
-      this.x = startX;
-      this.y = startY;
-      this.dir = Math.floor(Math.random()*4);
-      this.queuedDir = this.dir;
-      this.trail = []; // array of [x,y]
-      this.landCount = 0;
-      this.color = PALETTE[i % PALETTE.length];
-      this.botThink = 0;
-      this.botGoal = null;
-      this.name = isBot ? 'Bot ' + i : 'You';
+    constructor(i, isBot, sx, sy) {
+      this.i=i; this.bot=isBot; this.alive=true;
+      this.x=sx; this.y=sy; this.sx=sx; this.sy=sy;
+      this.fx=sx; this.fy=sy; // smooth floating pos
+      this.dir=Math.floor(Math.random()*4);
+      this.queuedDir=this.dir;
+      this.prevX=sx; this.prevY=sy;
+      this.trail=[];
+      this.landCount=0;
+      this.color=PAL[i%PAL.length];
+      this.name=isBot? this.color.name : 'You';
+      this.deathAt=null;
     }
-    seed() {
-      // claim a 3x3 base around starting cell
-      for (let dy=-1; dy<=1; dy++)
-        for (let dx=-1; dx<=1; dx++) {
-          const nx = this.x+dx, ny = this.y+dy;
-          if (inb(nx,ny)) {
-            if (owner[idx(nx,ny)] === -1) {
-              owner[idx(nx,ny)] = this.i;
-              this.landCount++;
-            }
-          }
+    seed(){
+      for(let dy=-2;dy<=2;dy++) for(let dx=-2;dx<=2;dx++){
+        const nx=this.x+dx, ny=this.y+dy;
+        if(inb(nx,ny) && owner[idx(nx,ny)]===-1){
+          owner[idx(nx,ny)] = this.i;
+          this.landCount++;
         }
+      }
     }
   }
 
   function reset() {
     owner = new Int16Array(ROWS*COLS).fill(-1);
     trailOwner = new Int16Array(ROWS*COLS).fill(-1);
-    players = [];
-
-    // place players at scattered spawns
-    const spawns = [];
+    players=[];
     const total = 1 + botCount;
-    const margin = 4;
-    while (spawns.length < total) {
-      const sx = margin + Math.floor(Math.random() * (COLS - margin*2));
-      const sy = margin + Math.floor(Math.random() * (ROWS - margin*2));
-      let ok = true;
-      for (const s of spawns) if (Math.abs(s[0]-sx)+Math.abs(s[1]-sy) < 10) { ok=false; break; }
-      if (ok) spawns.push([sx,sy]);
+    const margin = 8;
+    const spawns=[];
+    let tries=0;
+    while(spawns.length<total && tries<2000){
+      tries++;
+      const sx = margin + Math.floor(Math.random()*(COLS-margin*2));
+      const sy = margin + Math.floor(Math.random()*(ROWS-margin*2));
+      let ok=true;
+      for(const s of spawns) if(Math.abs(s[0]-sx)+Math.abs(s[1]-sy)<14){ok=false;break;}
+      if(ok) spawns.push([sx,sy]);
     }
-
-    for (let i=0;i<total;i++) {
+    for(let i=0;i<total;i++){
       const p = new Player(i, i!==0, spawns[i][0], spawns[i][1]);
       p.seed();
       players.push(p);
     }
-    frame = 0;
+    // put player at center of screen
+    camera.x = players[0].x*CELL;
+    camera.y = players[0].y*CELL;
+    camera.targetX = camera.x;
+    camera.targetY = camera.y;
+    frame=0;
+    startedAt=performance.now();
   }
 
-  // ---- input ----
-  const keys = {};
-  window.addEventListener('keydown', e => {
-    keys[e.key.toLowerCase()] = true;
+  // ======== INPUT ========
+  function setDir(nd){
     const p = players[0];
-    if (!p) return;
-    let nd = null;
-    if (e.key === 'ArrowRight' || e.key.toLowerCase()==='d') nd = 0;
-    else if (e.key === 'ArrowDown' || e.key.toLowerCase()==='s') nd = 1;
-    else if (e.key === 'ArrowLeft' || e.key.toLowerCase()==='a') nd = 2;
-    else if (e.key === 'ArrowUp'   || e.key.toLowerCase()==='w') nd = 3;
-    if (nd !== null) {
-      // no 180
-      if ((nd + 2) % 4 !== p.dir) p.queuedDir = nd;
-      e.preventDefault();
-    }
+    if(!p || !p.alive) return;
+    if((nd+2)%4 !== p.dir) p.queuedDir = nd;
+  }
+  window.addEventListener('keydown', e=>{
+    const k = e.key.toLowerCase();
+    let nd=null;
+    if(k==='arrowright'||k==='d') nd=0;
+    else if(k==='arrowdown'||k==='s') nd=1;
+    else if(k==='arrowleft'||k==='a') nd=2;
+    else if(k==='arrowup'||k==='w') nd=3;
+    if(nd!==null){ setDir(nd); e.preventDefault(); }
   });
-
-  // ---- touch (swipe) ----
-  let touchStart = null;
-  canvas.addEventListener('touchstart', e => {
-    const t = e.touches[0];
-    touchStart = { x: t.clientX, y: t.clientY };
+  // swipe
+  let touchStart=null;
+  canvas.addEventListener('touchstart', e=>{
+    if(e.touches.length){ const t=e.touches[0]; touchStart={x:t.clientX,y:t.clientY}; }
     e.preventDefault();
-  }, {passive:false});
-  canvas.addEventListener('touchmove', e => {
-    if (!touchStart) return;
-    const t = e.touches[0];
-    const dx = t.clientX - touchStart.x;
-    const dy = t.clientY - touchStart.y;
-    if (Math.abs(dx) < 18 && Math.abs(dy) < 18) return;
-    const p = players[0];
-    if (!p) return;
+  },{passive:false});
+  canvas.addEventListener('touchmove', e=>{
+    if(!touchStart || !e.touches.length) return;
+    const t=e.touches[0];
+    const dx=t.clientX-touchStart.x, dy=t.clientY-touchStart.y;
+    if(Math.abs(dx)<22 && Math.abs(dy)<22) return;
     let nd;
-    if (Math.abs(dx) > Math.abs(dy)) nd = dx > 0 ? 0 : 2;
-    else nd = dy > 0 ? 1 : 3;
-    if ((nd + 2) % 4 !== p.dir) p.queuedDir = nd;
-    touchStart = { x: t.clientX, y: t.clientY };
+    if(Math.abs(dx)>Math.abs(dy)) nd = dx>0?0:2;
+    else nd = dy>0?1:3;
+    setDir(nd);
+    touchStart={x:t.clientX,y:t.clientY};
     e.preventDefault();
-  }, {passive:false});
-  canvas.addEventListener('touchend', () => { touchStart = null; });
+  },{passive:false});
+  canvas.addEventListener('touchend', ()=>{ touchStart=null; });
+  // joypad
+  const pad = document.getElementById('pad');
+  const stick = pad.querySelector('.s');
+  let padTouch=null;
+  pad.addEventListener('touchstart', e=>{
+    const t=e.touches[0]; const r=pad.getBoundingClientRect();
+    padTouch={cx:r.left+r.width/2, cy:r.top+r.height/2};
+    handlePad(t.clientX,t.clientY);
+    e.preventDefault();
+  },{passive:false});
+  pad.addEventListener('touchmove', e=>{
+    if(!padTouch||!e.touches.length) return;
+    const t=e.touches[0];
+    handlePad(t.clientX,t.clientY);
+    e.preventDefault();
+  },{passive:false});
+  pad.addEventListener('touchend', ()=>{
+    padTouch=null;
+    stick.style.transform='translate(-50%,-50%)';
+  });
+  function handlePad(cx,cy){
+    if(!padTouch) return;
+    const dx=cx-padTouch.cx, dy=cy-padTouch.cy;
+    const d=Math.hypot(dx,dy);
+    const m=Math.min(d,45);
+    const ax=dx/(d||1)*m, ay=dy/(d||1)*m;
+    stick.style.transform=`translate(calc(-50% + ${ax}px), calc(-50% + ${ay}px))`;
+    if(d<10) return;
+    let nd;
+    if(Math.abs(dx)>Math.abs(dy)) nd=dx>0?0:2;
+    else nd=dy>0?1:3;
+    setDir(nd);
+  }
 
-  // ---- bot AI ----
-  function botDecide(p) {
-    // Choose a direction each tick based on difficulty + context.
-    const pos = [p.x, p.y];
-
-    // candidate directions, excluding reverse
-    const cands = [];
-    for (let d=0; d<4; d++) {
-      if ((d+2)%4 === p.dir) continue;
-      const nx = p.x + DIRS[d][0];
-      const ny = p.y + DIRS[d][1];
-      if (!inb(nx,ny)) continue;
-      // avoid own trail (instant death)
-      if (trailOwner[idx(nx,ny)] === p.i) continue;
-      // avoid any player cell
-      let occupied = false;
-      for (const q of players) {
-        if (q === p || !q.alive) continue;
-        if (q.x === nx && q.y === ny) { occupied = true; break; }
-      }
-      if (occupied) continue;
+  // ======== BOT AI ========
+  function botDecide(p){
+    const cands=[];
+    for(let d=0;d<4;d++){
+      if((d+2)%4===p.dir) continue;
+      const nx=p.x+DIRS[d][0], ny=p.y+DIRS[d][1];
+      if(!inb(nx,ny)) continue;
+      if(trailOwner[idx(nx,ny)]===p.i) continue;
+      let occ=false;
+      for(const q of players){ if(q===p||!q.alive) continue; if(q.x===nx&&q.y===ny){occ=true;break;} }
+      if(occ) continue;
       cands.push(d);
     }
-    if (!cands.length) return; // doomed, keep going
+    if(!cands.length) return;
+    let best=-Infinity, bd=cands[0];
+    for(const d of cands){
+      const nx=p.x+DIRS[d][0], ny=p.y+DIRS[d][1];
+      let s=0;
+      const onOwn = owner[idx(nx,ny)]===p.i;
+      const et = trailOwner[idx(nx,ny)];
+      const onEnemyTrail = et!==-1 && et!==p.i;
+      if(d===p.dir) s+=0.6;
+      const edge=Math.min(nx,ny,COLS-1-nx,ROWS-1-ny);
+      s+=Math.min(edge,5)*0.3;
 
-    // score each candidate
-    let bestScore = -Infinity, bestDir = cands[0];
-    for (const d of cands) {
-      const nx = p.x + DIRS[d][0], ny = p.y + DIRS[d][1];
-      let s = 0;
-
-      const onOwn = owner[idx(nx,ny)] === p.i;
-      const onEnemyTrail = trailOwner[idx(nx,ny)] !== -1 && trailOwner[idx(nx,ny)] !== p.i;
-
-      // base: prefer straight when far from edges
-      if (d === p.dir) s += 0.5;
-
-      // keep away from edges
-      const edge = Math.min(nx, ny, COLS-1-nx, ROWS-1-ny);
-      s += Math.min(edge, 4) * 0.3;
-
-      if (difficulty === 0) {
-        // Easy: wander out, come back when trail long
-        if (p.trail.length > 25) s += onOwn ? 4 : 0;
-        else s += onOwn ? -0.5 : 1.2;
-        s += Math.random() * 1.2;
-      } else if (difficulty === 1) {
-        // Normal: push out further, cut enemy trails opportunistically
-        if (onEnemyTrail) s += 5;
-        if (p.trail.length > 45) s += onOwn ? 6 : -1;
-        else s += onOwn ? -1 : 1.5;
-        s += Math.random() * 0.6;
+      if(difficulty===0){
+        if(p.trail.length>28) s += onOwn?4:0;
+        else s += onOwn?-0.5:1.1;
+        s += Math.random()*1.3;
+      } else if(difficulty===1){
+        if(onEnemyTrail) s+=5;
+        if(p.trail.length>55) s += onOwn?7:-1;
+        else s += onOwn?-1:1.6;
+        s += Math.random()*0.5;
+      } else if(difficulty===2){
+        if(onEnemyTrail) s+=10;
+        // hunt the nearest enemy head too
+        let nh=Infinity;
+        for(const q of players){ if(q===p||!q.alive) continue;
+          const d2=Math.abs(q.x-nx)+Math.abs(q.y-ny);
+          if(d2<nh) nh=d2;
+        }
+        if(nh<8) s += (8-nh)*0.6;
+        if(p.trail.length>80) s += onOwn?12:-2;
+        else s += onOwn?-1.5:1.8;
+        s += Math.random()*0.25;
       } else {
-        // Hard: hunters — chase nearest enemy trail, carve big
-        if (onEnemyTrail) s += 9;
-        // seek nearest enemy trail cell
-        let near = Infinity;
-        for (const q of players) {
-          if (q === p || !q.alive) continue;
-          for (const t of q.trail) {
-            const d2 = Math.abs(t[0]-nx) + Math.abs(t[1]-ny);
-            if (d2 < near) near = d2;
+        // insane: hunts you + cuts aggressively
+        if(onEnemyTrail) s+=14;
+        const you=players[0];
+        if(you && you.alive){
+          const d2=Math.abs(you.x-nx)+Math.abs(you.y-ny);
+          if(d2<14) s += (14-d2)*0.9;
+          // also try to intercept your trail
+          for(const t of you.trail){
+            const dd=Math.abs(t[0]-nx)+Math.abs(t[1]-ny);
+            if(dd<10) s += (10-dd)*0.7;
           }
         }
-        if (near < 20) s += (20 - near) * 0.4;
-        if (p.trail.length > 70) s += onOwn ? 10 : -2;
-        else s += onOwn ? -1.5 : 1.8;
-        s += Math.random() * 0.25;
+        if(p.trail.length>100) s += onOwn?15:-3;
+        else s += onOwn?-2:2.1;
+        s += Math.random()*0.15;
       }
 
-      // safety: if stepping off own land, count lookahead steps before we must return
-      if (!onOwn) {
-        // rough estimate: distance to nearest own cell
-        let nd = findNearestOwn(nx, ny, p.i, 12);
-        if (nd === -1) s -= 3; // very far from home
-        else s += (12 - nd) * 0.15;
+      if(!onOwn){
+        const nd2=findNearestOwn(nx,ny,p.i,14);
+        if(nd2===-1) s-=4;
+        else s += (14-nd2)*0.18;
       }
 
-      if (s > bestScore) { bestScore = s; bestDir = d; }
+      if(s>best){best=s;bd=d;}
     }
-    p.queuedDir = bestDir;
+    p.queuedDir=bd;
   }
 
-  function findNearestOwn(x, y, pid, maxDist) {
-    // BFS limited
+  function findNearestOwn(x,y,pid,maxD){
     const seen = new Uint8Array(COLS*ROWS);
-    const q = [[x,y,0]];
-    seen[idx(x,y)] = 1;
-    while (q.length) {
-      const [cx,cy,dd] = q.shift();
-      if (owner[idx(cx,cy)] === pid) return dd;
-      if (dd >= maxDist) continue;
-      for (const [dx,dy] of DIRS) {
+    const q=[[x,y,0]]; seen[idx(x,y)]=1;
+    while(q.length){
+      const [cx,cy,dd]=q.shift();
+      if(owner[idx(cx,cy)]===pid) return dd;
+      if(dd>=maxD) continue;
+      for(const [dx,dy] of DIRS){
         const nx=cx+dx, ny=cy+dy;
-        if (!inb(nx,ny)) continue;
-        if (seen[idx(nx,ny)]) continue;
-        seen[idx(nx,ny)] = 1;
+        if(!inb(nx,ny)||seen[idx(nx,ny)]) continue;
+        seen[idx(nx,ny)]=1;
         q.push([nx,ny,dd+1]);
       }
     }
     return -1;
   }
 
-  // ---- flood fill to claim enclosed areas ----
-  function claimEnclosed(pid) {
-    // mark all cells NOT owned by pid; flood from borders through those;
-    // any unreached cell becomes pid's.
+  // ======== FLOOD-FILL CLAIM ========
+  function claimEnclosed(pid){
     const mark = new Uint8Array(COLS*ROWS);
-    const q = [];
-    for (let x=0;x<COLS;x++) {
-      if (owner[idx(x,0)] !== pid) { mark[idx(x,0)] = 1; q.push([x,0]); }
-      if (owner[idx(x,ROWS-1)] !== pid) { mark[idx(x,ROWS-1)] = 1; q.push([x,ROWS-1]); }
+    const q=[];
+    for(let x=0;x<COLS;x++){
+      if(owner[idx(x,0)]!==pid){mark[idx(x,0)]=1;q.push([x,0]);}
+      if(owner[idx(x,ROWS-1)]!==pid){mark[idx(x,ROWS-1)]=1;q.push([x,ROWS-1]);}
     }
-    for (let y=0;y<ROWS;y++) {
-      if (owner[idx(0,y)] !== pid) { mark[idx(0,y)] = 1; q.push([0,y]); }
-      if (owner[idx(COLS-1,y)] !== pid) { mark[idx(COLS-1,y)] = 1; q.push([COLS-1,y]); }
+    for(let y=0;y<ROWS;y++){
+      if(owner[idx(0,y)]!==pid){mark[idx(0,y)]=1;q.push([0,y]);}
+      if(owner[idx(COLS-1,y)]!==pid){mark[idx(COLS-1,y)]=1;q.push([COLS-1,y]);}
     }
-    while (q.length) {
-      const [x,y] = q.pop();
-      for (const [dx,dy] of DIRS) {
+    while(q.length){
+      const [x,y]=q.pop();
+      for(const [dx,dy] of DIRS){
         const nx=x+dx, ny=y+dy;
-        if (!inb(nx,ny)) continue;
-        if (mark[idx(nx,ny)]) continue;
-        if (owner[idx(nx,ny)] === pid) continue;
-        mark[idx(nx,ny)] = 1;
-        q.push([nx,ny]);
+        if(!inb(nx,ny)||mark[idx(nx,ny)]||owner[idx(nx,ny)]===pid) continue;
+        mark[idx(nx,ny)]=1; q.push([nx,ny]);
       }
     }
-    for (let y=0;y<ROWS;y++)
-      for (let x=0;x<COLS;x++)
-        if (!mark[idx(x,y)] && owner[idx(x,y)] !== pid) {
-          // transfer ownership
-          const prev = owner[idx(x,y)];
-          owner[idx(x,y)] = pid;
-          if (prev !== -1 && players[prev]) players[prev].landCount--;
-          players[pid].landCount++;
-        }
+    for(let y=0;y<ROWS;y++) for(let x=0;x<COLS;x++)
+      if(!mark[idx(x,y)] && owner[idx(x,y)]!==pid){
+        const prev=owner[idx(x,y)];
+        owner[idx(x,y)]=pid;
+        if(prev!==-1 && players[prev]) players[prev].landCount--;
+        players[pid].landCount++;
+      }
   }
-
-  function closeTrail(p) {
-    // paint trail into owned land, clear trailOwner, flood-fill claim
-    for (const [tx,ty] of p.trail) {
-      if (owner[idx(tx,ty)] !== p.i) {
-        const prev = owner[idx(tx,ty)];
-        owner[idx(tx,ty)] = p.i;
-        if (prev !== -1 && players[prev]) players[prev].landCount--;
+  function closeTrail(p){
+    for(const [tx,ty] of p.trail){
+      if(owner[idx(tx,ty)]!==p.i){
+        const prev=owner[idx(tx,ty)];
+        owner[idx(tx,ty)]=p.i;
+        if(prev!==-1 && players[prev]) players[prev].landCount--;
         p.landCount++;
       }
-      trailOwner[idx(tx,ty)] = -1;
+      trailOwner[idx(tx,ty)]=-1;
     }
-    p.trail.length = 0;
+    p.trail.length=0;
     claimEnclosed(p.i);
   }
-
-  function killPlayer(p) {
-    if (!p.alive) return;
-    p.alive = false;
-    // clear their land and trail
-    for (let i=0;i<owner.length;i++) {
-      if (owner[i] === p.i) owner[i] = -1;
-      if (trailOwner[i] === p.i) trailOwner[i] = -1;
+  function killPlayer(p){
+    if(!p.alive) return;
+    p.alive=false;
+    p.deathAt=performance.now();
+    for(let i=0;i<owner.length;i++){
+      if(owner[i]===p.i) owner[i]=-1;
+      if(trailOwner[i]===p.i) trailOwner[i]=-1;
     }
-    p.trail.length = 0;
-    p.landCount = 0;
+    p.trail.length=0;
+    p.landCount=0;
   }
 
-  function tick() {
-    // bots decide
-    for (const p of players) if (p.alive && p.bot) botDecide(p);
+  // ======== TICK ========
+  function tick(){
+    for(const p of players) if(p.alive && p.bot) botDecide(p);
+    for(const p of players) if(p.alive) p.dir = p.queuedDir;
 
-    // commit queued dirs
-    for (const p of players) if (p.alive) p.dir = p.queuedDir;
-
-    // move all alive players once
-    for (const p of players) {
-      if (!p.alive) continue;
-      const nx = p.x + DIRS[p.dir][0];
-      const ny = p.y + DIRS[p.dir][1];
-
-      if (!inb(nx,ny)) { killPlayer(p); continue; }
-
-      // riding own trail = death
-      if (trailOwner[idx(nx,ny)] === p.i) { killPlayer(p); continue; }
-
-      // hitting enemy trail = cut them down
-      const tOwner = trailOwner[idx(nx,ny)];
-      if (tOwner !== -1 && tOwner !== p.i) {
-        killPlayer(players[tOwner]);
-      }
-
-      // moving into another alive player's body = death for the mover
-      // (we check post-move collisions below too)
-      let crashed = false;
-      for (const q of players) {
-        if (q === p || !q.alive) continue;
-        if (q.x === nx && q.y === ny) { crashed = true; break; }
-      }
-      if (crashed) { killPlayer(p); continue; }
-
-      p.x = nx; p.y = ny;
-
-      const onOwn = owner[idx(nx,ny)] === p.i;
-      if (!onOwn) {
-        // extend trail
-        trailOwner[idx(nx,ny)] = p.i;
+    for(const p of players){
+      if(!p.alive) continue;
+      p.prevX=p.x; p.prevY=p.y;
+      const nx=p.x+DIRS[p.dir][0], ny=p.y+DIRS[p.dir][1];
+      if(!inb(nx,ny)){ killPlayer(p); continue; }
+      if(trailOwner[idx(nx,ny)]===p.i){ killPlayer(p); continue; }
+      const tOwn=trailOwner[idx(nx,ny)];
+      if(tOwn!==-1 && tOwn!==p.i) killPlayer(players[tOwn]);
+      let crash=false;
+      for(const q of players){ if(q===p||!q.alive) continue; if(q.x===nx&&q.y===ny){crash=true;break;} }
+      if(crash){ killPlayer(p); continue; }
+      p.x=nx; p.y=ny;
+      const onOwn = owner[idx(nx,ny)]===p.i;
+      if(!onOwn){
+        trailOwner[idx(nx,ny)]=p.i;
         p.trail.push([nx,ny]);
-      } else {
-        // returned home — close if we had a trail
-        if (p.trail.length > 0) closeTrail(p);
+      } else if(p.trail.length>0){
+        closeTrail(p);
       }
     }
 
-    // head-on same-cell collisions (two players stepped into same cell)
+    // same-cell collisions
     const cellMap = new Map();
-    for (const p of players) {
-      if (!p.alive) continue;
-      const k = p.x + ',' + p.y;
-      if (cellMap.has(k)) {
-        killPlayer(p);
-        killPlayer(cellMap.get(k));
-      } else cellMap.set(k, p);
+    for(const p of players){
+      if(!p.alive) continue;
+      const k=p.x+','+p.y;
+      if(cellMap.has(k)){ killPlayer(p); killPlayer(cellMap.get(k)); }
+      else cellMap.set(k,p);
     }
 
     frame++;
-
-    // check player end state
     const aliveBots = players.slice(1).filter(q=>q.alive).length;
-    if (!players[0].alive) endGame(false);
-    else if (aliveBots === 0) endGame(true);
-    else if (players[0].landCount / (COLS*ROWS) >= 0.6) endGame(true);
+    if(!players[0].alive) endGame(false);
+    else if(aliveBots===0) endGame(true);
+    else if(players[0].landCount/(COLS*ROWS) >= 0.6) endGame(true);
   }
 
-  // ---- render ----
-  function draw() {
-    // bg
-    ctx.fillStyle = '#111622';
-    ctx.fillRect(0,0,canvas.width,canvas.height);
+  // ======== RENDER ========
+  function updateCamera(sub){
+    const p = players[0];
+    if(!p) return;
+    // smooth interpolated head
+    const hx = (p.prevX + (p.x - p.prevX)*sub) * CELL + CELL/2;
+    const hy = (p.prevY + (p.y - p.prevY)*sub) * CELL + CELL/2;
+    camera.targetX = hx; camera.targetY = hy;
+    const k = 0.18;
+    camera.x += (camera.targetX - camera.x) * k;
+    camera.y += (camera.targetY - camera.y) * k;
+  }
 
-    // grid lines (sparse)
-    ctx.strokeStyle = '#1a2032';
-    ctx.lineWidth = 1;
-    ctx.beginPath();
-    for (let x=0;x<=COLS;x+=5) { ctx.moveTo(x*CELL+0.5, 0); ctx.lineTo(x*CELL+0.5, ROWS*CELL); }
-    for (let y=0;y<=ROWS;y+=5) { ctx.moveTo(0, y*CELL+0.5); ctx.lineTo(COLS*CELL, y*CELL+0.5); }
-    ctx.stroke();
+  function draw(sub){
+    // camera transform
+    const z = camera.zoom;
+    const vw = W/z, vh = H/z;
+    const camX = camera.x - vw/2;
+    const camY = camera.y - vh/2;
 
-    // owned cells
-    for (let y=0;y<ROWS;y++) {
-      for (let x=0;x<COLS;x++) {
+    ctx.save();
+    ctx.fillStyle='#111622';
+    ctx.fillRect(0,0,W,H);
+    ctx.scale(z,z);
+    ctx.translate(-camX, -camY);
+
+    // compute visible cell window
+    const cx0 = Math.max(0, Math.floor(camX/CELL)-1);
+    const cy0 = Math.max(0, Math.floor(camY/CELL)-1);
+    const cx1 = Math.min(COLS-1, Math.ceil((camX+vw)/CELL)+1);
+    const cy1 = Math.min(ROWS-1, Math.ceil((camY+vh)/CELL)+1);
+
+    // world backdrop
+    ctx.fillStyle = '#131a29';
+    ctx.fillRect(0, 0, COLS*CELL, ROWS*CELL);
+
+    // grid dots
+    ctx.fillStyle='#1c2742';
+    for(let y=cy0;y<=cy1;y+=1){
+      for(let x=cx0;x<=cx1;x+=1){
+        if((x+y)%2===0) ctx.fillRect(x*CELL, y*CELL, CELL, CELL);
+      }
+    }
+
+    // owned land
+    for(let y=cy0;y<=cy1;y++){
+      for(let x=cx0;x<=cx1;x++){
         const o = owner[idx(x,y)];
-        if (o !== -1) {
+        if(o!==-1){
           ctx.fillStyle = players[o].color.fill;
           ctx.fillRect(x*CELL, y*CELL, CELL, CELL);
         }
       }
     }
-
-    // trails
-    for (let y=0;y<ROWS;y++) {
-      for (let x=0;x<COLS;x++) {
-        const t = trailOwner[idx(x,y)];
-        if (t !== -1) {
-          ctx.fillStyle = players[t].color.trail;
-          ctx.fillRect(x*CELL+2, y*CELL+2, CELL-4, CELL-4);
+    // outline between land owners (thin)
+    ctx.strokeStyle='rgba(0,0,0,0.25)';
+    ctx.lineWidth=1;
+    for(let y=cy0;y<=cy1;y++){
+      for(let x=cx0;x<=cx1;x++){
+        const o = owner[idx(x,y)];
+        if(o===-1) continue;
+        // right/bottom outline where neighbor differs
+        if(x+1<COLS && owner[idx(x+1,y)]!==o){
+          ctx.beginPath(); ctx.moveTo((x+1)*CELL, y*CELL); ctx.lineTo((x+1)*CELL, (y+1)*CELL); ctx.stroke();
+        }
+        if(y+1<ROWS && owner[idx(x,y+1)]!==o){
+          ctx.beginPath(); ctx.moveTo(x*CELL, (y+1)*CELL); ctx.lineTo((x+1)*CELL, (y+1)*CELL); ctx.stroke();
         }
       }
     }
 
-    // players
-    for (const p of players) {
-      if (!p.alive) continue;
-      ctx.fillStyle = p.color.body;
-      ctx.fillRect(p.x*CELL, p.y*CELL, CELL, CELL);
-      ctx.fillStyle = '#000';
-      ctx.fillRect(p.x*CELL+3, p.y*CELL+3, 3, 3);
-      ctx.fillRect(p.x*CELL+CELL-6, p.y*CELL+3, 3, 3);
-      if (!p.bot) {
-        ctx.fillStyle = '#000';
-        ctx.fillRect(p.x*CELL-1, p.y*CELL-1, CELL+2, 2);
+    // trails
+    for(let y=cy0;y<=cy1;y++){
+      for(let x=cx0;x<=cx1;x++){
+        const t = trailOwner[idx(x,y)];
+        if(t!==-1){
+          ctx.fillStyle = players[t].color.trail;
+          const inset=3;
+          roundRect(ctx, x*CELL+inset, y*CELL+inset, CELL-inset*2, CELL-inset*2, 4);
+          ctx.fill();
+        }
       }
     }
 
-    // HUD
-    const me = players[0];
-    const totalCells = COLS*ROWS;
-    const pct = me.alive ? ((me.landCount/totalCells)*100).toFixed(1) : '0.0';
-    document.getElementById('hLand').textContent = pct + '%';
-    document.getElementById('hTrail').textContent = me.alive ? me.trail.length : 0;
-    const aliveBots = players.slice(1).filter(q=>q.alive).length;
-    document.getElementById('hBots').textContent = aliveBots;
-    const ranked = [...players].sort((a,b)=>b.landCount - a.landCount);
-    document.getElementById('hRank').textContent = ranked.indexOf(me)+1;
-    document.getElementById('hTotal').textContent = players.length;
-  }
+    // world border
+    ctx.strokeStyle='#ffd16633';
+    ctx.lineWidth=3;
+    ctx.strokeRect(0,0,COLS*CELL,ROWS*CELL);
 
-  function endGame(win) {
-    running = false;
-    const over = document.getElementById('over');
-    over.style.display = 'flex';
-    over.classList.toggle('win', win);
-    document.getElementById('overTitle').textContent = win ? 'YOU WON' : 'WIPED';
-    const me = players[0];
-    const totalCells = COLS*ROWS;
-    const pct = ((me.landCount/totalCells)*100).toFixed(1);
-    document.getElementById('overStats').innerHTML =
-      'Land: <b>'+pct+'%</b><br>Frame: '+frame;
-  }
-
-  function loop(t) {
-    if (!running) return;
-    const dt = t - lastT;
-    lastT = t;
-    const tickMs = difficulty === 2 ? 70 : difficulty === 1 ? 85 : 100;
-    tickAccum += dt;
-    while (tickAccum >= tickMs) {
-      tick();
-      tickAccum -= tickMs;
-      if (!running) break;
+    // players
+    for(const p of players){
+      if(!p.alive) continue;
+      const fx = (p.prevX + (p.x-p.prevX)*sub)*CELL;
+      const fy = (p.prevY + (p.y-p.prevY)*sub)*CELL;
+      // body shadow
+      ctx.fillStyle='rgba(0,0,0,0.35)';
+      roundRect(ctx, fx+2, fy+3, CELL-2, CELL-2, 6); ctx.fill();
+      // body
+      ctx.fillStyle = p.color.body;
+      roundRect(ctx, fx, fy, CELL, CELL, 6); ctx.fill();
+      // face (eyes)
+      ctx.fillStyle='#111';
+      const d=p.dir;
+      let eox=0, eoy=0;
+      if(d===0){eox=4;}
+      else if(d===2){eox=-4;}
+      else if(d===1){eoy=4;}
+      else {eoy=-4;}
+      const cxE = fx+CELL/2, cyE=fy+CELL/2;
+      // perpendicular offset for two eyes
+      const perp = d%2===0 ? [0,5] : [5,0];
+      ctx.beginPath(); ctx.arc(cxE+eox-perp[0], cyE+eoy-perp[1], 2.5, 0, Math.PI*2); ctx.fill();
+      ctx.beginPath(); ctx.arc(cxE+eox+perp[0], cyE+eoy+perp[1], 2.5, 0, Math.PI*2); ctx.fill();
+      // name label
+      ctx.fillStyle='rgba(0,0,0,0.6)';
+      ctx.font='bold 11px system-ui';
+      const name = p.name;
+      const tw = ctx.measureText(name).width + 8;
+      ctx.fillRect(fx+CELL/2-tw/2, fy-16, tw, 14);
+      ctx.fillStyle = p.color.body;
+      ctx.textAlign='center';
+      ctx.textBaseline='middle';
+      ctx.fillText(name, fx+CELL/2, fy-9);
     }
-    draw();
+
+    ctx.restore();
+    drawMini();
+    drawHud();
+  }
+
+  function roundRect(c,x,y,w,h,r){
+    r=Math.min(r,w/2,h/2);
+    c.beginPath();
+    c.moveTo(x+r,y);
+    c.arcTo(x+w,y,x+w,y+h,r);
+    c.arcTo(x+w,y+h,x,y+h,r);
+    c.arcTo(x,y+h,x,y,r);
+    c.arcTo(x,y,x+w,y,r);
+    c.closePath();
+  }
+
+  function drawMini(){
+    const mw=mini.width, mh=mini.height;
+    mctx.fillStyle='#0d0f14';
+    mctx.fillRect(0,0,mw,mh);
+    const sx=mw/COLS, sy=mh/ROWS;
+    for(let y=0;y<ROWS;y++){
+      for(let x=0;x<COLS;x++){
+        const o=owner[idx(x,y)];
+        if(o!==-1){
+          mctx.fillStyle = players[o].color.body;
+          mctx.fillRect(x*sx, y*sy, Math.max(1,sx), Math.max(1,sy));
+        }
+      }
+    }
+    // player dot
+    for(const p of players){
+      if(!p.alive) continue;
+      mctx.fillStyle = p===players[0] ? '#fff' : p.color.body;
+      mctx.fillRect(p.x*sx-1, p.y*sy-1, 3, 3);
+    }
+    // frame border
+    mctx.strokeStyle='#ffd16666';
+    mctx.strokeRect(0.5,0.5,mw-1,mh-1);
+  }
+
+  function drawHud(){
+    const me=players[0];
+    const total=COLS*ROWS;
+    const pct = me.alive ? (me.landCount/total*100) : 0;
+    document.getElementById('youPct').textContent = pct.toFixed(2)+'%';
+    document.getElementById('trailFill').style.width = Math.min(100, (me.alive?me.trail.length:0)/60*100)+'%';
+    const sec = Math.floor((performance.now()-startedAt)/1000);
+    const mm = Math.floor(sec/60), ss = sec%60;
+    document.getElementById('timer').textContent = mm+':'+(ss<10?'0':'')+ss;
+
+    // scoreboard — top 8
+    const ranked=[...players].sort((a,b)=>b.landCount-a.landCount).slice(0,8);
+    const box = document.getElementById('score');
+    let html='';
+    for(let i=0;i<ranked.length;i++){
+      const p=ranked[i];
+      const pc = (p.landCount/total*100).toFixed(1);
+      const dead = !p.alive;
+      html += `<div class="row ${p===me?'me':''}" style="${dead?'opacity:.35':''}">
+        <div class="sw" style="background:${p.color.body}"></div>
+        <div class="nm">${i+1}. ${p.name}${dead?' ×':''}</div>
+        <div class="pc">${pc}%</div>
+      </div>`;
+    }
+    box.innerHTML = html;
+  }
+
+  function endGame(win){
+    if(!running) return;
+    running=false;
+    const over=document.getElementById('over');
+    over.style.display='flex';
+    over.classList.toggle('win', win);
+    document.getElementById('overTitle').textContent = win?'YOU WON':'WIPED';
+    const me=players[0];
+    const total=COLS*ROWS;
+    const pct=(me.landCount/total*100).toFixed(2);
+    const sec=Math.floor((performance.now()-startedAt)/1000);
+    document.getElementById('overStats').innerHTML =
+      `<div>Land: <b style="color:#ffd166">${pct}%</b></div>
+       <div>Time: ${Math.floor(sec/60)}m ${sec%60}s</div>
+       <div>Bots left: ${players.slice(1).filter(q=>q.alive).length} / ${botCount}</div>`;
+  }
+
+  // ======== LOOP ========
+  let lastT=0, tickAccum=0;
+  function loop(t){
+    if(!running) return;
+    const dt=t-lastT; lastT=t;
+    const tickMs = [110, 95, 80, 65][difficulty];
+    tickAccum += dt;
+    while(tickAccum>=tickMs){
+      tick();
+      tickAccum-=tickMs;
+      if(!running) break;
+    }
+    const sub = Math.min(1, tickAccum/tickMs);
+    updateCamera(sub);
+    draw(sub);
     requestAnimationFrame(loop);
   }
 
-  // ---- menu wiring ----
-  document.querySelectorAll('#diffRow button').forEach(b => {
-    b.addEventListener('click', () => {
-      document.querySelectorAll('#diffRow button').forEach(x => x.classList.remove('on'));
+  // ======== MENU ========
+  document.querySelectorAll('#diffRow button').forEach(b=>{
+    b.addEventListener('click',()=>{
+      document.querySelectorAll('#diffRow button').forEach(x=>x.classList.remove('on'));
       b.classList.add('on');
-      difficulty = parseInt(b.dataset.d, 10);
+      difficulty=parseInt(b.dataset.d,10);
     });
   });
-  document.querySelectorAll('#botRow button').forEach(b => {
-    b.addEventListener('click', () => {
-      document.querySelectorAll('#botRow button').forEach(x => x.classList.remove('on'));
+  document.querySelectorAll('#botRow button').forEach(b=>{
+    b.addEventListener('click',()=>{
+      document.querySelectorAll('#botRow button').forEach(x=>x.classList.remove('on'));
       b.classList.add('on');
-      botCount = parseInt(b.dataset.b, 10);
+      botCount=parseInt(b.dataset.b,10);
     });
   });
   document.getElementById('startBtn').addEventListener('click', start);
-  document.getElementById('againBtn').addEventListener('click', () => {
-    document.getElementById('over').style.display = 'none';
+  document.getElementById('againBtn').addEventListener('click', ()=>{
+    document.getElementById('over').style.display='none';
     start();
   });
-
-  function start() {
-    document.getElementById('menu').style.display = 'none';
-    document.getElementById('over').style.display = 'none';
+  function start(){
+    document.getElementById('menu').style.display='none';
+    document.getElementById('over').style.display='none';
     reset();
-    running = true;
-    lastT = performance.now();
-    tickAccum = 0;
+    running=true;
+    lastT=performance.now();
+    tickAccum=0;
     requestAnimationFrame(loop);
   }
 
-  // first paint
+  resize();
   reset();
-  draw();
+  // menu preview render
+  running=true; (function once(t){ if(document.getElementById('menu').style.display==='none'){return;} updateCamera(1); draw(1); setTimeout(()=>requestAnimationFrame(once), 500); })();
+  running=false;
 })();
 </script>
 </body>
